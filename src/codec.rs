@@ -1,9 +1,7 @@
 use serde_json;
 use serde::{Deserialize, Deserializer};
 use cards;
-use rand::distributions::{IndependentSample, Range};
-use rand::Rng;
-use rand;
+
 fn deserialize_optional_field<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
     where D: Deserializer<'de>,
           T: Deserialize<'de>
@@ -25,7 +23,7 @@ impl TableInfo {
 }
 #[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct PrivateInformation {}
-#[derive(Serialize, Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize,Debug, Clone,PartialEq)]
 pub struct Player {
     pub name: String,
     pub vp: usize,
@@ -59,54 +57,6 @@ impl Player {
             rotated_cards: vec![],
         }
     }
-    pub fn starting<T: cards::Board>(&mut self,
-                                     cardmeta: &[cards::ListCard<T>; 180],
-                                     owned_deck: &mut Vec<usize>) {
-        let mut collected_letter = vec![];
-        let mut collected_id = vec![];
-        let mut rand_id = vec![];
-        let mut two_cards_id = vec![];
-        let mut remaining_deck = vec![];
-        for &cards::ListCard { letter, ref genre, ref giveables, id, .. } in cardmeta.iter() {
-            if !owned_deck.contains(&id) {
-                //if it is not owned
-                remaining_deck.push(id);
-            }
-        }
-        for r_id in remaining_deck {
-            match (&cardmeta[r_id].genre, &cardmeta[r_id].giveables) {
-                (&cards::Genre::NONE, &cards::GIVEABLE::COIN(_)) => {
-                    let letc = cardmeta[r_id].letter.to_owned();
-                    if !collected_letter.contains(&letc) {
-                        //has not collected letter
-                        collected_letter.push(cardmeta[r_id].letter.to_owned());
-                        collected_id.push(r_id);
-                        owned_deck.push(r_id);
-                    }
-                }
-                (&cards::Genre::NONE, &cards::GIVEABLE::VP(_)) => {
-                    rand_id.push(r_id);
-                }
-                _ => {}
-            }
-        }
-        let mut rng = rand::thread_rng();
-        for _ in 0..2 {
-            let between = Range::new(0, rand_id.len() - 1);
-            let c = between.ind_sample(&mut rng) as usize;
-            println!("c {}", c);
-            if let Some(&idz) = rand_id.get(c) {
-                two_cards_id.push(idz);
-                rand_id.remove(c);
-                owned_deck.push(idz);
-            }
-        }
-        collected_id.extend(two_cards_id.clone());
-        rng.shuffle(&mut collected_id);
-        let vecdraft = collected_id.split_off(5);
-        self.hand = collected_id;
-        self.draft = vecdraft;
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -119,8 +69,24 @@ pub struct GameCommand {
     pub reply: Option<usize>,
     pub buyoffer: Option<usize>,
     pub buylockup: Option<usize>,
+    pub killserver: Option<bool>,
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
+impl GameCommand {
+    pub fn new() -> Self {
+        GameCommand {
+            use_ink: None,
+            use_remover: None,
+            arranged: None,
+            wild: None,
+            submit_word: None,
+            reply: None,
+            buyoffer: None,
+            buylockup: None,
+            killserver: None,
+        }
+    }
+}
+#[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
 pub struct BoardCodec {
     pub players: Vec<Player>,
 }

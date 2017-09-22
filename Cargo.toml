@@ -8,7 +8,6 @@ serde="1.0"
 serde_json = "1.0"
 serde_derive ="1.0"
 cardgame_macros = {path="../cardgame_macros"}
-rand = "0.3.16"
 
 [lib]
 name = "hardback_server_lib"
