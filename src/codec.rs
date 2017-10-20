@@ -1,6 +1,5 @@
 use serde_json;
 use serde::{Deserialize, Deserializer};
-use cards;
 
 fn deserialize_optional_field<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
     where D: Deserializer<'de>,
@@ -30,14 +29,15 @@ pub struct Player {
     pub coin: usize,
     pub ink: usize,
     pub remover: usize,
-    pub arranged: Vec<usize>,
-    pub wild: Vec<Option<String>>,
+    pub arranged: Vec<(usize, Option<String>)>,
+    pub vec_of_cards_to_decide: Vec<usize>,
     pub inked_cards: Vec<usize>,
     pub hand: Vec<usize>,
     pub draft: Vec<usize>,
     pub discard: Vec<usize>,
     pub lockup: Vec<usize>,
     pub rotated_cards: Vec<usize>,
+    pub skip_cards:Vec<usize>
 }
 impl Player {
     pub fn new(name: String) -> Player {
@@ -48,13 +48,14 @@ impl Player {
             ink: 0,
             remover: 0,
             arranged: vec![],
-            wild: vec![],
+            vec_of_cards_to_decide: vec![],
             inked_cards: vec![],
             hand: vec![],
             draft: vec![],
             discard: vec![],
             lockup: vec![],
             rotated_cards: vec![],
+            skip_cards:vec![],
         }
     }
 }
@@ -63,13 +64,15 @@ impl Player {
 pub struct GameCommand {
     pub use_ink: Option<usize>,
     pub use_remover: Option<usize>,
-    pub arranged: Option<Vec<usize>>,
-    pub wild: Option<(usize, String)>,
+    pub arranged: Option<Vec<(usize, Option<String>)>>,
     pub submit_word: Option<bool>,
     pub reply: Option<usize>,
-    pub buyoffer: Option<usize>,
-    pub buylockup: Option<usize>,
+    pub buy_offer: Option<(bool,usize)>,
+    pub lockup:Option<(bool,usize)>,
+    pub buy_lockup: Option<(bool,usize)>,
     pub killserver: Option<bool>,
+    pub trash_other:Option<(bool,usize)>,
+    pub putback_discard:Option<bool>
 }
 impl GameCommand {
     pub fn new() -> Self {
@@ -77,19 +80,50 @@ impl GameCommand {
             use_ink: None,
             use_remover: None,
             arranged: None,
-            wild: None,
             submit_word: None,
             reply: None,
-            buyoffer: None,
-            buylockup: None,
+            buy_offer: None,
+            lockup:None,
+            buy_lockup: None,
             killserver: None,
+            trash_other:None,
+            putback_discard:None,
         }
     }
 }
 #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
 pub struct BoardCodec {
     pub players: Vec<Player>,
+    pub gamestates: Vec<GameState>,
+    pub offer_row: Vec<usize>,
+    pub turn_index:usize,
+    pub ticks:Option<u16>
 }
+#[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
+pub enum GameState {
+    Spell,
+    TurnToSubmit,
+    Buy,
+    DrawCard,
+    ResolvePurchase,
+    WaitForReply,
+    ResolveAgain(Option<usize>,usize),
+    LockUp,
+    TrashOther,
+    PutBackDiscard(usize,usize)
+}
+#[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
+pub enum Replay{
+    Play(u16),
+    Pause(u16),
+    Exit
+}
+#[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
+pub enum ClientError{
+    NotConnectedToInternet,
+    CannotFindServer
+}
+
 CGM_codec!{
     structname:ServerReceivedMsg,
     rename:{
@@ -102,7 +136,7 @@ CGM_codec!{
     (leaveTable,set_leave_table,bool),
     (joinLobby,set_join_lobby,bool),
     (namechange,set_name_change,String),
-    (chat,set_chat,String),
+    (message,set_message,String),
     (location,set_location,String),
     },rename_optional:{},else:{}
 }
@@ -115,12 +149,14 @@ CGM_codec!{
     (players,set_players,Vec<Player>),
     (privateInformation,set_private_information,PrivateInformation),
     (boardstate,set_boardstate,Result<BoardCodec,String>),
-    (request,set_request,(String,Vec<String>)),
+    (turn_index,set_turn_index,usize),
+    (request,set_request,(usize,usize,String,Vec<String>,Option<u16>)),
     (reason,set_reason,String),
     (optional,set_optional,bool),
     (location,set_location,String),
     (sender,set_sender,String),
     (message,set_message,String),
     (log,set_log,String),
+    (error,set_error,ClientError)
     },rename_optional:{ (type_name,set_type_name,String,"type"),},else:{}
 }

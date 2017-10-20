@@ -1,3 +1,5 @@
+use codec::{Player,GameState};
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Card {
     pub letter: String,
@@ -34,7 +36,9 @@ pub enum Genre {
     ROMANCE,
     NONE,
 }
-
+pub type WaitForSingleInput = (usize,String,Vec<(GameState,String,Box<Fn(&mut Player, &mut Vec<usize>)>)>);
+pub type WaitForInputType = Vec<Option<WaitForSingleInput>>;
+//Option if none, just broadcast boardcodec
 pub struct ListCard<T> {
     pub id: usize,
     pub letter: &'static str,
@@ -45,18 +49,42 @@ pub struct ListCard<T> {
     pub trash: GIVEABLE,
     pub genre: Genre,
     pub rotated: bool,
-    pub giveablefn: Option<Box<Fn(&mut T, usize, usize)>>,
-    pub genrefn: Option<Box<Fn(&mut T, usize, usize)>>,
+    pub giveablefn: Option<Box<Fn(&mut T, usize, usize, &mut [WaitForInputType; 4])>>,
+    pub genrefn: Option<Box<Fn(&mut T, usize, usize, &mut [WaitForInputType; 4])>>,
 }
 pub trait Board {
-    fn two_cent_per_adv(&mut self, player_id: usize, card_index: usize);
-    fn minus_other_ink(&mut self, player_id: usize, card_index: usize);
-    fn lockup_offer(&mut self, player_id: usize, card_index: usize);
-    fn uncover_adjacent(&mut self, player_id: usize, card_index: usize);
-    fn double_adjacent(&mut self, player_id: usize, card_index: usize);
-    fn trash_other(&mut self, player_id: usize, card_index: usize);
-    fn one_vp_per_wild(&mut self, player_id: usize, card_index: usize);
-    fn keep_or_discard_three(&mut self, player_id: usize, card_index: usize);
+    fn two_cent_per_adv(&mut self,
+                        player_id: usize,
+                        card_index: usize,
+                        wait_for_input: &mut [WaitForInputType; 4]);
+    fn minus_other_ink(&mut self,
+                       player_id: usize,
+                       card_index: usize,
+                       wait_for_input: &mut [WaitForInputType; 4]);
+    fn lockup_offer(&mut self,
+                    player_id: usize,
+                    card_index: usize,
+                    wait_for_input: &mut [WaitForInputType; 4]);
+    fn uncover_adjacent(&mut self,
+                        player_id: usize,
+                        card_index: usize,
+                        wait_for_input: &mut [WaitForInputType; 4]);
+    fn double_adjacent(&mut self,
+                       player_id: usize,
+                       card_index: usize,
+                       wait_for_input: &mut [WaitForInputType; 4]);
+    fn trash_other(&mut self,
+                   player_id: usize,
+                   card_index: usize,
+                   wait_for_input: &mut [WaitForInputType; 4]);
+    fn one_vp_per_wild(&mut self,
+                       player_id: usize,
+                       card_index: usize,
+                       wait_for_input: &mut [WaitForInputType; 4]);
+    fn putback_or_discard_three(&mut self,
+                             player_id: usize,
+                             card_index: usize,
+                             wait_for_input: &mut [WaitForInputType; 4]);
 }
 macro_rules! listcard_map {
     (structtype:$s_alias:ty,
@@ -98,9 +126,9 @@ pub fn populate<T: Board>() -> [ListCard<T>; 180] {
         (11,"l",4,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ADVENTURE,false,None,None),
         (12,"m",6,GIVEABLE::VP(3),GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ADVENTURE,false,None,None),
         (13,"n",4,GIVEABLE::VP(1),GIVEABLE::COIN(2),GIVEABLE::VPCOIN(1,1),GIVEABLE::NONE,Genre::ADVENTURE,false,None,None),
-        (14,"o",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ADVENTURE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (14,"o",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ADVENTURE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //genre, 2cents for every adv
-            b.two_cent_per_adv(p,c);
+            b.two_cent_per_adv(p,c,w);
         }))),
         (15,"p",4,GIVEABLE::VP(1),GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ADVENTURE,false,None,None),
         (16,"q",7,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(4),GIVEABLE::VP(3),Genre::ADVENTURE,false,None,None),
@@ -128,9 +156,9 @@ pub fn populate<T: Board>() -> [ListCard<T>; 180] {
         (38,"e",8,GIVEABLE::NONE,GIVEABLE::COININK(2),GIVEABLE::VPORCOIN(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
         (39,"f",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VPORCOININK(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
         (40,"g",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VPINK(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (41,"h",7,GIVEABLE::NONE,GIVEABLE::VPCOIN(1,2),GIVEABLE::VPCOIN(2,1),GIVEABLE::NONE,Genre::HORROR,false,None,Some(Box::new(|ref mut b, p,c| {
+        (41,"h",7,GIVEABLE::NONE,GIVEABLE::VPCOIN(1,2),GIVEABLE::VPCOIN(2,1),GIVEABLE::NONE,Genre::HORROR,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //horror, genre other player -1 ink/remover
-            b.minus_other_ink(p,c);
+            b.minus_other_ink(p,c,w);
         }))),
         (42,"i",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VPORCOIN(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
         (43,"j",5,GIVEABLE::NONE,GIVEABLE::VPINK(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
@@ -146,349 +174,349 @@ pub fn populate<T: Board>() -> [ListCard<T>; 180] {
         (53,"t",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VPINK(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
         (54,"u",2,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VPORCOIN(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
         (55,"v",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::VPINK(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (54,"w",4,GIVEABLE::NONE,GIVEABLE::VPINK(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (55,"x",6,GIVEABLE::NONE,GIVEABLE::VPINK(3),GIVEABLE::VP(3),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (56,"y",3,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COININK(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (57,"z",3,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::VPORCOININK(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (58,"v",5,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COININK(1),GIVEABLE::NONE,Genre::HORROR,true,None,None),
-        (59,"x",2,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (60,"w",5,GIVEABLE::NONE,GIVEABLE::COININK(2),GIVEABLE::COIN(3),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (61,"u",6,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (62,"n",6,GIVEABLE::NONE,GIVEABLE::VPORCOIN(1),GIVEABLE::VPINK(2),GIVEABLE::NONE,Genre::HORROR,true,None,None),
-        (63,"s",7,GIVEABLE::NONE,GIVEABLE::VPINK(3),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (64,"c",8,GIVEABLE::NONE,GIVEABLE::COININK(2),GIVEABLE::COIN(3),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (65,"e",5,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (66,"d",4,GIVEABLE::NONE,GIVEABLE::VPORCOIN(1),GIVEABLE::VPCOIN(1,1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (67,"a",3,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::HORROR,false,None,None),
-        (68,"b",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (56,"w",4,GIVEABLE::NONE,GIVEABLE::VPINK(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (57,"x",6,GIVEABLE::NONE,GIVEABLE::VPINK(3),GIVEABLE::VP(3),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (58,"y",3,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COININK(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (59,"z",3,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::VPORCOININK(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (60,"v",5,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COININK(1),GIVEABLE::NONE,Genre::HORROR,true,None,None),
+        (61,"x",2,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (62,"w",5,GIVEABLE::NONE,GIVEABLE::COININK(2),GIVEABLE::COIN(3),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (63,"u",6,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (64,"n",6,GIVEABLE::NONE,GIVEABLE::VPORCOIN(1),GIVEABLE::VPINK(2),GIVEABLE::NONE,Genre::HORROR,true,None,None),
+        (65,"s",7,GIVEABLE::NONE,GIVEABLE::VPINK(3),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (66,"c",8,GIVEABLE::NONE,GIVEABLE::COININK(2),GIVEABLE::COIN(3),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (67,"e",5,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (68,"d",4,GIVEABLE::NONE,GIVEABLE::VPORCOIN(1),GIVEABLE::VPCOIN(1,1),GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (69,"a",3,GIVEABLE::NONE,GIVEABLE::VPORCOIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::HORROR,false,None,None),
+        (70,"b",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:Lockup offer rowcard
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         })),None),
-        (69,"c",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (71,"c",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover
-            b.uncover_adjacent(p,c);
-        })),Some(Box::new(|ref mut b, p,c| {
+            b.uncover_adjacent(p,c,w);
+        })),Some(Box::new(|ref mut b, p,c,w| {
             //mystery,  gen:Lock up offer row
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         }))),
-        (70,"d",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (72,"d",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent wild
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (71,"e",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (73,"e",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:uncover adjacent wild
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (72,"f",2,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (74,"f",2,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:Lockup offer rowcard
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         })),None),
-        (73,"g",6,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (75,"g",6,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (74,"h",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (76,"h",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery,) Non-gen:Lockup offer rowcard
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         })),None),
-        (75,"i",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (77,"i",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (76,"j",8,GIVEABLE::NONE,GIVEABLE::VP(5),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (78,"j",8,GIVEABLE::NONE,GIVEABLE::VP(5),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (77,"k",2,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (79,"k",2,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (78,"l",6,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (80,"l",6,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (79,"m",3,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (81,"m",3,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (80,"n",7,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (82,"n",7,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:all wild cards +vp
-            b.one_vp_per_wild(p,c);
+            b.one_vp_per_wild(p,c,w);
         }))),
-        (81,"o",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (83,"o",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:Lockup offer rowcard
-            b.lockup_offer(p,c);
-        })),Some(Box::new(|ref mut b, p,c| {
+            b.lockup_offer(p,c,w);
+        })),Some(Box::new(|ref mut b, p,c,w| {
             //mystery,  gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (82,"p",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (84,"p",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (83,"q",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (85,"q",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (84,"r",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (86,"r",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (85,"s",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (87,"s",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:Lockup offer rowcard
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         })),None),
-        (86,"t",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (88,"t",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (87,"u",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (89,"u",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery,  gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (88,"v",9,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(4),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (90,"v",9,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(4),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (89,"w",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (91,"w",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery,  gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (90,"x",3,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (92,"x",3,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:Lockup offer rowcard
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         })),None),
-        (91,"y",7,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (93,"y",7,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (92,"z",5,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (94,"z",5,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery,  gen: uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         }))),
-        (93,"i",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (95,"i",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery,  gen: lockup after rowcard
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         }))),
-        (94,"a",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,true,None,None),
-        (95,"f",5,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (96,"a",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,true,None,None),
+        (97,"f",5,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:Lockup offer rowcard
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         })),None),
-        (96,"m",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,true,None,Some(Box::new(|ref mut b, p,c| {
+        (98,"m",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,true,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery,  gen: lockup offer row
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         }))),
-        (97,"k",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (99,"k",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (98,"q",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(3),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (100,"q",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(3),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (99,"t",8,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,true,None,Some(Box::new(|ref mut b, p,c| {
+        (101,"t",8,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::MYSTERY,true,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:lockup offer row
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         }))),
-        (100,"r",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (102,"r",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
-        })),Some(Box::new(|ref mut b, p,c| {
+            b.uncover_adjacent(p,c,w);
+        })),Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:Lockup
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         }))),
-        (101,"p",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c| {
+        (103,"p",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::MYSTERY,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, gen:lockup
-            b.lockup_offer(p,c);
+            b.lockup_offer(p,c,w);
         }))),
-        (102,"a",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c| {
+        (104,"a",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::MYSTERY,false,Some(Box::new(|ref mut b, p,c,w| {
             //mystery, Non-gen:uncover adjacent
-            b.uncover_adjacent(p,c);
+            b.uncover_adjacent(p,c,w);
         })),None),
-        (103,"z",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (105,"z",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         })),None),
-        (104,"w",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (106,"w",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash other
-            b.trash_other(p,c);
-        })),Some(Box::new(|ref mut b, p,c| {
+            b.trash_other(p,c,w);
+        })),Some(Box::new(|ref mut b, p,c,w| {
             //rommanc,  gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         }))),
-        (105,"v",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (107,"v",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (106,"u",9,GIVEABLE::NONE,GIVEABLE::VP(5),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (108,"u",9,GIVEABLE::NONE,GIVEABLE::VP(5),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         }))),
-        (107,"t",3,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (109,"t",3,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen: thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (108,"s",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (110,"s",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (109,"r",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (111,"r",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:keep or discard top3
-            b.keep_or_discard_three(p,c);
+            b.putback_or_discard_three(p,c,w);
         }))),
-        (110,"q",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (112,"q",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (111,"p",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (113,"p",6,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         }))),
-        (112,"o",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (114,"o",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         }))),
-        (113,"n",2,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (115,"n",2,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (114,"m",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (116,"m",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (115,"l",8,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (117,"l",8,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         }))),
-        (116,"k",3,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (118,"k",3,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (117,"j",6,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (119,"j",6,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:double adjacent
-            b.double_adjacent(p,c);
-        })),Some(Box::new(|ref mut b, p,c| {
+            b.double_adjacent(p,c,w);
+        })),Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (118,"i",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,None),
-        (119,"h",3,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (120,"i",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,None),
+        (121,"h",3,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (120,"g",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (122,"g",3,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (121,"f",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (123,"f",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (122,"e",6,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (124,"e",6,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (123,"d",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (125,"d",4,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         }))),
-        (124,"c",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (126,"c",3,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (125,"b",3,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (127,"b",3,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         })),None),
-        (126,"a",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (128,"a",4,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (127,"b",5,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,true,None,Some(Box::new(|ref mut b, p,c| {
+        (129,"b",5,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,true,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (128,"e",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,None),
-        (129,"f",6,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (130,"e",2,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,None,None),
+        (131,"f",6,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:double adjacent
-            b.double_adjacent(p,c);
-        })),Some(Box::new(|ref mut b, p,c| {
+            b.double_adjacent(p,c,w);
+        })),Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (130,"h",7,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c| {
+        (132,"h",7,GIVEABLE::NONE,GIVEABLE::VP(3),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:double adjacent
-            b.double_adjacent(p,c);
+            b.double_adjacent(p,c,w);
         }))),
-        (131,"k",5,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,true,None,Some(Box::new(|ref mut b, p,c| {
+        (133,"k",5,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,true,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:trash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (132,"n",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (134,"n",5,GIVEABLE::NONE,GIVEABLE::COIN(2),GIVEABLE::COIN(1),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:trash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (133,"o",8,GIVEABLE::NONE,GIVEABLE::VPCOIN(1,2),GIVEABLE::VPCOIN(1,1),GIVEABLE::NONE,Genre::ROMANCE,true,None,None),
-        (134,"r",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,true,None,Some(Box::new(|ref mut b, p,c| {
+        (135,"o",8,GIVEABLE::NONE,GIVEABLE::VPCOIN(1,2),GIVEABLE::VPCOIN(1,1),GIVEABLE::NONE,Genre::ROMANCE,true,None,None),
+        (136,"r",5,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,true,None,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:trash
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (135,"z",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (137,"z",4,GIVEABLE::NONE,GIVEABLE::VP(2),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:trash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (136,"y",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (138,"y",4,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:double adjacent
-            b.double_adjacent(p,c);
-        })),Some(Box::new(|ref mut b, p,c| {
+            b.double_adjacent(p,c,w);
+        })),Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, gen:thrash other
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         }))),
-        (137,"x",7,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c| {
+        (139,"x",7,GIVEABLE::NONE,GIVEABLE::VP(4),GIVEABLE::VP(2),GIVEABLE::NONE,Genre::ROMANCE,false,Some(Box::new(|ref mut b, p,c,w| {
             //rommanc, Non-gen:trash other card
-            b.trash_other(p,c);
+            b.trash_other(p,c,w);
         })),None),
-        (138,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (139,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (140,"c",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (141,"d",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (142,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (143,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (144,"g",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (145,"h",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (146,"i",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (147,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (148,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (149,"l",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (150,"m",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (151,"n",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (152,"o",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (153,"p",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (154,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (155,"r",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (156,"s",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (157,"t",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (158,"u",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (159,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (160,"i",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (161,"i",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (140,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (141,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (142,"c",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (143,"d",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (144,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (145,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (146,"g",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (147,"h",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (148,"i",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (149,"a",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (150,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (151,"l",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (152,"m",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (153,"n",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (154,"o",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (155,"p",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (156,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (157,"r",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (158,"s",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (159,"t",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (160,"u",0,GIVEABLE::NONE,GIVEABLE::VP(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (161,"e",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
         (162,"i",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (163,"l",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (164,"l",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (163,"i",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (164,"i",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
         (165,"l",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (166,"n",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (167,"n",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (166,"l",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (167,"l",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
         (168,"n",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (169,"r",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (170,"r",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (169,"n",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (170,"n",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
         (171,"r",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (172,"s",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (173,"s",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (172,"r",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (173,"r",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
         (174,"s",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (175,"t",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
-        (176,"t",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (175,"s",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (176,"s",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
         (177,"t",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (178,"t",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
+        (179,"t",0,GIVEABLE::NONE,GIVEABLE::COIN(1),GIVEABLE::NONE,GIVEABLE::NONE,Genre::NONE,false,None,None),
         }
         
     }
