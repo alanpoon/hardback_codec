@@ -101,6 +101,7 @@ pub struct BoardCodec {
 }
 #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
 pub enum GameState {
+    ShowDraft,
     Spell,
     TurnToSubmit,
     Buy,
@@ -118,12 +119,19 @@ pub enum Replay{
     Pause(u16),
     Exit
 }
-#[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
-pub enum ClientError{
-    NotConnectedToInternet,
-    CannotFindServer
-}
 
+#[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
+pub enum ConnectionError {
+    NotConnectedToInternet,
+    CannotFindServer,
+    InvalidDestination,
+}
+#[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
+#[serde(tag = "connection_status", content = "c")]
+pub enum ConnectionStatus {
+    Error(ConnectionError),
+    Ok,
+}
 CGM_codec!{
     structname:ServerReceivedMsg,
     rename:{
@@ -146,9 +154,9 @@ CGM_codec!{
     },optional:{
     (tables,set_tables,Vec<TableInfo>),
     (tablenumber,set_tablenumber,usize),
-    (players,set_players,Vec<Player>),
     (privateInformation,set_private_information,PrivateInformation),
     (boardstate,set_boardstate,Result<BoardCodec,String>),
+    (player_index,set_player_index,usize),
     (turn_index,set_turn_index,usize),
     (request,set_request,(usize,usize,String,Vec<String>,Option<u16>)),
     (reason,set_reason,String),
@@ -157,6 +165,7 @@ CGM_codec!{
     (sender,set_sender,String),
     (message,set_message,String),
     (log,set_log,String),
-    (error,set_error,ClientError)
+    (ready,set_ready,bool),
+    (connection_status,set_connection_status,ConnectionStatus)
     },rename_optional:{ (type_name,set_type_name,String,"type"),},else:{}
 }
