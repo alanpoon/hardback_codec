@@ -36,7 +36,7 @@ pub enum Genre {
     ROMANCE,
     NONE,
 }
-pub type WaitForSingleInput = (usize,String,Vec<(GameState,String,Box<Fn(&mut Player, &mut Vec<usize>)>)>);
+pub type WaitForSingleInput = (usize,String,Vec<(GameState,String,Box<Fn(&mut Player, &mut Vec<usize>,&mut Vec<usize>)>)>);
 pub type WaitForInputType = Vec<Option<WaitForSingleInput>>;
 //Option if none, just broadcast boardcodec
 pub struct ListCard<T> {
@@ -48,7 +48,7 @@ pub struct ListCard<T> {
     pub genre_giveables: GIVEABLE,
     pub trash: GIVEABLE,
     pub genre: Genre,
-    pub rotated: bool,
+    pub timeless: bool,
     pub giveablefn: Option<Box<Fn(&mut T, usize, usize, &mut [WaitForInputType; 4])>>,
     pub genrefn: Option<Box<Fn(&mut T, usize, usize, &mut [WaitForInputType; 4])>>,
 }
@@ -85,10 +85,11 @@ pub trait Board {
                              player_id: usize,
                              card_index: usize,
                              wait_for_input: &mut [WaitForInputType; 4]);
+  
 }
 macro_rules! listcard_map {
     (structtype:$s_alias:ty,
-cards:{  $(($id:expr,$letter:expr,$cost:expr,$purchase_giveables:expr,$giveables:expr,$genre_giveables:expr,$trash:expr,$genre:expr,$rotated:expr,$giveablefn:expr,$genrefn:expr)),* $(,)*
+cards:{  $(($id:expr,$letter:expr,$cost:expr,$purchase_giveables:expr,$giveables:expr,$genre_giveables:expr,$trash:expr,$genre:expr,$timeless:expr,$giveablefn:expr,$genrefn:expr)),* $(,)*
 })
         => {
          let cards:[ListCard<$s_alias>;180] =[
@@ -101,7 +102,7 @@ cards:{  $(($id:expr,$letter:expr,$cost:expr,$purchase_giveables:expr,$giveables
                   genre_giveables:$genre_giveables,
                   trash:$trash,
                   genre:$genre,
-                  rotated:$rotated,
+                  timeless:$timeless,
                   giveablefn:$giveablefn,
                   genrefn:$genrefn
              },)*
