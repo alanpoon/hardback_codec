@@ -1,4 +1,4 @@
-use codec::{Player,GameState};
+use codec::{Player, GameState};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Card {
@@ -36,7 +36,13 @@ pub enum Genre {
     ROMANCE,
     NONE,
 }
-pub type WaitForSingleInput = (usize,String,Vec<(GameState,String,Box<Fn(&mut Player, &mut Vec<usize>,&mut Vec<usize>)>)>);
+pub type WaitForSingleInput = (usize,
+                               GameState,
+                               String,
+                               Vec<(GameState,
+                                    String,
+                                    Box<Fn(&mut Player, &mut Vec<usize>, &mut Vec<usize>)>)>);
+//card_index,waitstate,header,Optionvec
 pub type WaitForInputType = Vec<Option<WaitForSingleInput>>;
 //Option if none, just broadcast boardcodec
 pub struct ListCard<T> {
@@ -82,10 +88,9 @@ pub trait Board {
                        card_index: usize,
                        wait_for_input: &mut [WaitForInputType; 4]);
     fn putback_or_discard_three(&mut self,
-                             player_id: usize,
-                             card_index: usize,
-                             wait_for_input: &mut [WaitForInputType; 4]);
-  
+                                player_id: usize,
+                                card_index: usize,
+                                wait_for_input: &mut [WaitForInputType; 4]);
 }
 macro_rules! listcard_map {
     (structtype:$s_alias:ty,

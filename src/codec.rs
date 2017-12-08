@@ -31,16 +31,16 @@ pub struct Player {
     pub coin: usize,
     pub ink: usize,
     pub remover: usize,
-    pub literacy_award:usize,
-    pub arranged: Vec<(usize,bool,Option<String>,bool)>,
+    pub literacy_award: usize,
+    pub arranged: Vec<(usize, bool, Option<String>, bool)>,
     pub vec_of_cards_to_decide: Vec<usize>,
-    pub hand: Vec<usize>,//bool:true=>Inked,false=>Normal
-    pub draft: Vec<usize>,//only used in show draft
-    pub draftlen:usize,
+    pub hand: Vec<usize>, //bool:true=>Inked,false=>Normal
+    pub draft: Vec<usize>, //only used in show draft
+    pub draftlen: usize,
     pub discard: Vec<usize>,
     pub lockup: Vec<usize>,
     pub timeless_classic: Vec<usize>,
-    pub skip_cards:Vec<usize> // delay resolve
+    pub skip_cards: Vec<usize>, // delay resolve
 }
 impl Player {
     pub fn new(name: String) -> Player {
@@ -50,53 +50,59 @@ impl Player {
             coin: 0,
             ink: 0,
             remover: 0,
-            literacy_award:0,
+            literacy_award: 0,
             arranged: vec![],
             vec_of_cards_to_decide: vec![],
             hand: vec![],
             draft: vec![],
-            draftlen:5,
+            draftlen: 5,
             discard: vec![],
             lockup: vec![],
             timeless_classic: vec![],
-            skip_cards:vec![],
-
+            skip_cards: vec![],
         }
     }
+}
+#[derive( Serialize, Deserialize,Debug, Clone,PartialEq)]
+pub struct Personal {
+    pub hand: Vec<usize>,
+    pub arranged: Vec<(usize, bool, Option<String>, bool)>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GameCommand {
-    pub go_to_shuffle:Option<bool>,
-    pub take_card_use_ink:Option<bool>,
+    pub go_to_shuffle: Option<bool>,
+    pub take_card_use_ink: Option<bool>,
     pub use_ink: Option<usize>,
     pub use_remover: Option<Vec<usize>>,
-    pub arranged: Option<Vec<(usize,bool, Option<String>,bool)>>,
+    pub arranged: Option<Vec<(usize, bool, Option<String>, bool)>>, //arranged can be used interchangably with personal
+    pub personal: Option<Personal>,
     pub submit_word: Option<bool>,
     pub reply: Option<usize>,
-    pub buy_offer: Option<(bool,usize)>,
-    pub lockup:Option<(bool,usize)>,
-    pub buy_lockup: Option<(bool,usize)>,
+    pub buy_offer: Option<(bool, usize)>,
+    pub lockup: Option<(bool, usize)>,
+    pub buy_lockup: Option<(bool, usize)>,
     pub killserver: Option<bool>,
-    pub trash_other:Option<(bool,usize)>,
-    pub putback_discard:Option<bool>
+    pub trash_other: Option<(bool, usize)>,
+    pub putback_discard: Option<bool>,
 }
 impl GameCommand {
     pub fn new() -> Self {
         GameCommand {
-            go_to_shuffle:None,
-            take_card_use_ink:None,
+            go_to_shuffle: None,
+            take_card_use_ink: None,
             use_ink: None,
             use_remover: None,
             arranged: None,
+            personal: None,
             submit_word: None,
             reply: None,
             buy_offer: None,
-            lockup:None,
+            lockup: None,
             buy_lockup: None,
             killserver: None,
-            trash_other:None,
-            putback_discard:None,
+            trash_other: None,
+            putback_discard: None,
         }
     }
 }
@@ -105,8 +111,8 @@ pub struct BoardCodec {
     pub players: Vec<Player>,
     pub gamestates: Vec<GameState>,
     pub offer_row: Vec<usize>,
-    pub turn_index:usize,
-    pub ticks:Option<u16>
+    pub turn_index: usize,
+    pub ticks: Option<u16>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
 pub enum GameState {
@@ -118,16 +124,16 @@ pub enum GameState {
     DrawCard,
     ResolvePurchase,
     WaitForReply,
-    ResolveAgain(Option<usize>,usize),
+    ResolveAgain(Option<usize>, usize),
     LockUp,
     TrashOther,
-    PutBackDiscard(usize,usize)
+    PutBackDiscard(usize, usize),
 }
 #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
-pub enum Replay{
+pub enum Replay {
     Play(u16),
     Pause(u16),
-    Exit
+    Exit,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
@@ -169,6 +175,7 @@ CGM_codec!{
     (player_index,set_player_index,usize),
     (turn_index,set_turn_index,usize),
     (request,set_request,(usize,usize,String,Vec<String>,Option<u16>)),
+    (notification,set_notification,String),
     (location,set_location,String),
     (sender,set_sender,String),
     (message,set_message,String),
