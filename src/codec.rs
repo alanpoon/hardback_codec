@@ -37,9 +37,9 @@ pub struct Player {
     pub hand: Vec<usize>, //bool:true=>Inked,false=>Normal
     pub draft: Vec<usize>, //only used in show draft
     pub draftlen: usize,
-    pub discard: Vec<usize>,
     pub lockup: Vec<usize>,
     pub timeless_classic: Vec<usize>,
+    pub discard:Vec<usize>,
     pub skip_cards: Vec<usize>, // delay resolve
 }
 impl Player {
@@ -56,10 +56,10 @@ impl Player {
             hand: vec![],
             draft: vec![],
             draftlen: 5,
-            discard: vec![],
             lockup: vec![],
             timeless_classic: vec![],
             skip_cards: vec![],
+            discard:vec![]
         }
     }
 }
@@ -85,6 +85,7 @@ pub struct GameCommand {
     pub killserver: Option<bool>,
     pub trash_other: Option<(bool, usize)>,
     pub putback_discard: Option<bool>,
+    pub exit_game:Option<bool>
 }
 impl GameCommand {
     pub fn new() -> Self {
@@ -103,6 +104,7 @@ impl GameCommand {
             killserver: None,
             trash_other: None,
             putback_discard: None,
+            exit_game:None
         }
     }
 }
@@ -118,16 +120,24 @@ pub struct BoardCodec {
 pub enum GameState {
     ShowDraft,
     Shuffle,
+    PreSpell,
     Spell,
+    PreTurnToSubmit,
     TurnToSubmit,
+    PreBuy,
     Buy,
+    PreDrawCard,
     DrawCard,
     ResolvePurchase,
+    PreWaitForReply,
     WaitForReply,
     ResolveAgain(Option<usize>, usize),
     LockUp,
-    TrashOther,
+    PreTrashOther(usize),
+    TrashOther(usize),
+    PrePutBackDiscard(usize,usize),
     PutBackDiscard(usize, usize),
+    ShowResult(usize),//winner
 }
 #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
 pub enum Replay {
@@ -172,6 +182,7 @@ CGM_codec!{
     (tablenumber,set_tablenumber,usize),
     (privateInformation,set_private_information,PrivateInformation),
     (boardstate,set_boardstate,Result<BoardCodec,String>),
+    (hand,set_hand,Vec<usize>),
     (player_index,set_player_index,usize),
     (turn_index,set_turn_index,usize),
     (request,set_request,(usize,usize,String,Vec<String>,Option<u16>)),
