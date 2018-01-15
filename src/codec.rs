@@ -155,6 +155,7 @@ pub enum ConnectionError {
 #[derive(Serialize, Deserialize, Debug, Clone,PartialEq)]
 #[serde(tag = "connection_status", content = "c")]
 pub enum ConnectionStatus {
+    None,
     Error(ConnectionError),
     Ok,
 }
