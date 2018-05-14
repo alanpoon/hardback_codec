@@ -1,6 +1,6 @@
 use serde_json;
 use serde::{Deserialize, Deserializer};
-
+use std::time::Instant;
 fn deserialize_optional_field<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
     where D: Deserializer<'de>,
           T: Deserialize<'de>
@@ -156,6 +156,7 @@ pub enum ConnectionError {
 #[serde(tag = "connection_status", content = "c")]
 pub enum ConnectionStatus {
     None,
+    Try(Instant),
     Error(ConnectionError),
     Ok,
 }
