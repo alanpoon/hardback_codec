@@ -1,6 +1,8 @@
 use serde_json;
 use serde::{Deserialize, Deserializer};
-use chrono::{DateTime,Local};
+use chrono::offset::Utc;
+use chrono::DateTime;
+
 fn deserialize_optional_field<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
     where D: Deserializer<'de>,
           T: Deserialize<'de>
@@ -156,7 +158,7 @@ pub enum ConnectionError {
 #[serde(tag = "connection_status", content = "c")]
 pub enum ConnectionStatus {
     None,
-    Try(DateTime<Local>),
+    Try(DateTime<Utc>),
     Error(ConnectionError),
     Ok,
 }
